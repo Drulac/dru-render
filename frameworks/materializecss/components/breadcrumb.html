@@ -1,0 +1,16 @@
+<nav>
+	<div class="<%=additionnalClass%> nav-wrapper">
+		<div class="col <%=width%> <%=Mwidth%> <%=color%> <%=colorVariante%> <%=textColor%>">
+			<%
+			if(typeof paths != "undefined" && paths != null)
+			{
+				for(path of paths){
+				%>
+					<a href="<%=path.href%>" class="breadcrumb"><%=component(path.content)%></a>
+				<%
+				}
+			}
+			%>
+		</div>
+	</div>
+</nav>

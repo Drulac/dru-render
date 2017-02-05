@@ -1,0 +1,24 @@
+<%
+	if(typeof id == "undefined")
+	{
+		id = "";
+	}
+
+	if(typeof type != "undefined")
+	{
+		type = "type=\""+type+"\"";
+	}else{
+		type = "";
+	}
+%>
+<div class="input-field col <%=color%> <%=colorVariante%> <%=textColor%> <%=width%> <%=Mwidth%>">
+	<input <%="id=\""+id+"\""%> <%=type%>>
+	<%
+	if(typeof label != "undefined")
+	{
+	%>
+		<label <%="for=\""+id+"\""%>><%=label%></label>
+	<%
+	}
+	%>
+</div>

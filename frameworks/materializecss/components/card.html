@@ -1,0 +1,33 @@
+<div class="col <%=width%> <%=Mwidth%>">
+	<div class="card <%=additionnalClass%> <%=color%> <%=colorVariante%>">
+		<div class="card-content <%=textColor%>">
+			<%
+			if(typeof title != "undefined" && title != null)
+			{
+			%>
+			<span class="card-title"><%=title%></span>
+			<%
+			}
+			%>
+			<p>
+				<%=content%>
+			</p>
+		</div>
+		<%
+		if(typeof cardActions != "undefined" && cardActions != null)
+		{
+		%>
+		<div class="card-action">
+			<%
+			for(action of cardActions){
+			%>
+			<%=component(action)%>
+			<%
+			}
+			%>
+		</div>
+		<%
+		}
+		%>
+	</div>
+</div>

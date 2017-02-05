@@ -1,0 +1,21 @@
+{
+  "name": "dru-render",
+  "version": "0.0.1",
+  "description": "drudru JS middleware used to render HTML",
+  "main": "render.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Drulac <drulac@protonmail.com>",
+  "license": "GPL-3.0",
+  "repository": {
+    "url": "https://github.com/Drulac/dru-render",
+    "type": "git"
+  },
+  "dependencies": {
+    "js-beautify": "^1.6.8",
+    "path": "^0.12.7",
+    "serialize-javascript": "^1.3.0",
+    "victorica": "0.0.2"
+  }
+}
