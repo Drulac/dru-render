@@ -1,4 +1,32 @@
-<div class="col <%=width%> <%=Mwidth%>">
+<%
+if(width === "")
+{
+	width = 6;
+}
+if(Mwidth === "")
+{
+	Mwidth = width;
+}
+
+if(typeof width === "number")
+{
+	width = "s"+width;
+}
+if(typeof Mwidth === "number")
+{
+	Mwidth = "m"+Mwidth;
+}
+
+if(typeof offset === "number")
+{
+	offset = "offset-s"+offset;
+}
+if(typeof offsetM === "number")
+{
+	offsetM = "offset-m"+offsetM;
+}
+%>
+<div class="col <%=width%> <%=Mwidth%> <%=offset%> <%=offsetM%>">
 	<div class="card <%=additionnalClass%> <%=color%> <%=colorVariante%>">
 		<div class="card-content <%=textColor%>">
 			<%
@@ -9,9 +37,7 @@
 			<%
 			}
 			%>
-			<p>
-				<%=content%>
-			</p>
+			<%=content%>
 		</div>
 		<%
 		if(typeof cardActions != "undefined" && cardActions != null)
