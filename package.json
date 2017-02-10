@@ -1,6 +1,6 @@
 {
   "name": "dru-render",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "drudru JS middleware used to render HTML",
   "main": "render.js",
   "scripts": {
