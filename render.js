@@ -10,7 +10,27 @@ let render = (app, framework)=>{
 	let dir = __dirname;
 	let fs = require("fs");
 	let path = require("path");
-	let serialize = require("serialize-javascript");
+
+	let serialize = (code)=>{
+		let ser = require("serialize-javascript");
+		code = ser(code);
+		while(code.match(/\\u003E/g) != null)
+		{
+			code = code.replace(/\\u003E/g, ">");
+		}
+
+		while(code.match(/\\u003C/g) != null)
+		{
+			code = code.replace(/\\u003C/g, "<");
+		}
+
+		while(code.match(/\\u002F/g) != null)
+		{
+			code = code.replace(/\\u002F/g, "\/");
+		}
+		return code;
+	};
+
 	let jsbeautifier = require("js-beautify");
 	let victorica = require('victorica');
 
@@ -158,11 +178,14 @@ let render = (app, framework)=>{
 			let code = component.code;
 			if(code.search("<%") != -1)
 			{
-				
+				let vars = [];
 				//convert the code
 				code = code.replace(/\<\%\=((.|\n)*?)\%\>/gm, (match, p1)=>{
 					if(p1 != "" && p1 != null)
-					return "<% code += "+p1+";\n %>";
+					{
+						vars.push(p1);
+						return "<% code += "+p1+";\n %>";
+					}
 				});
 				code = code.replace(/\%\>((.|\n)*?)\<\%/gm, (match, p1)=>{
 					let retour = serialize(clear(p1));
@@ -182,8 +205,7 @@ let render = (app, framework)=>{
 						return "code += "+retour+";\n";
 					}else{ return ""; }
 				});
-				code = "let code = \"\";\n"+code;
-				code += "return code;\n";
+				code = "code = \"\";\n"+code;
 
 
 				//delete inutile spaces
@@ -199,21 +221,6 @@ let render = (app, framework)=>{
 					code = code.replace(/code \+= "";\n/g, "");
 				}
 
-				while(code.match(/\\u003E/g) != null)
-				{
-					code = code.replace(/\\u003E/g, ">");
-				}
-
-				while(code.match(/\\u003C/g) != null)
-				{
-					code = code.replace(/\\u003C/g, "<");
-				}
-
-				while(code.match(/\\u002F/g) != null)
-				{
-					code = code.replace(/\\u002F/g, "\/");
-				}
-
 				while(code.match(/\ncode \+= ([^\n;]+);\ncode \+= ([^\n;]+)/g) != null)
 				{
 					code = code.replace(/\ncode \+= ([^\n;]+);\ncode \+= ([^\n;]+)/g, (match, p1, p2)=>{
@@ -225,6 +232,7 @@ let render = (app, framework)=>{
 				code = jsbeautifier(code);
 
 				component.code = code;
+				component.vars = vars;
 				return component;
 			}else{
 				let id = randomID();
@@ -241,74 +249,65 @@ let render = (app, framework)=>{
 	let executeComponent = (component, params)=>{
 		//binding params
 		let code = component.code;
+		let vars = component.vars;
 
-		let argsNames = "";
-		let argsValues = [];
+
+
 		let arr = Object.getOwnPropertyNames(params);
-
-		let addArg = (name, value)=>{
-			if(argsNames !== "")
-			{
-				argsNames += ",";
-			}
-			argsNames += name;
-			argsValues.push(value);
-		};
-
 
 		for(let i in arr)
 		{
-			if(arr[i] != "content")
+			var index = vars.indexOf(arr[i]);
+			if (index > -1) {
+				vars.splice(index, 1);
+			}
+
+			let value = serialize(clear(params[arr[i]]));
+			let tmp = "a";
+			if(value.charAt(0) === "\"" && value.charAt(value.length-1) === "\"")
 			{
-				let value = params[arr[i]];
-				addArg(arr[i], value);
-			}else{
-				let value = params[arr[i]];
-				addArg(arr[i], value);
-				//addArg(arr[i], "<content>"+value+"</content>");
+				tmp = value.slice(1).substring(0, value.length - 1);
+				tmp = parseInt(tmp);
 			}
+			if(!isNaN(tmp))
+			{
+				value = tmp;
+			}
+
+			code = arr[i]+" = "+value+";\n"+code;
+			code = code+"\n"+arr[i]+" = \"\";";
 		}
 
 
 
 
 
-
-
-		let events = [];
-
-		let on = function(e, cb){
-			events.push({e: e, cb: cb});
-		};
-
-		let self = {self: component.last, selfs: component.domAll, on: on};
-
-
-
-
-		error = 1;
-		var execute;
-		while(error > 0)
+		for(varName of vars)
 		{
-			try{
-				execute = new Function(argsNames, code);
-				execute = execute.bind(self);
-				execute = execute.apply(null, argsValues);
-				error = 0;
-			}catch(e){
-				varName = e.toString().match(new RegExp("ReferenceError: (.*) is not defined"));
-				if(varName != null)
-				{
-					varName = varName[1];
-					code = "let "+varName+" = \"\";\n"+code;
-					error++;
-				}else{
-					console.log(code);
-					console.log(e);
-					break;
-				}
+			if(typeof varName != undefined && varName != "undefined" && !(new RegExp(/[()]/).test(varName)))
+			{
+				code = varName+" = \"\";\n"+code;
+				code = code+"\n"+varName+" = \"\";";
 			}
 		}
+
+
+		code += "\nreturn code;";
+
+
+		
+
+
+		let execute;
+		try{
+			//console.log("\n"+code);
+			execute = new Function(code)();
+		}catch(e){
+			console.log("\n");
+			console.log(code);
+			console.log(e);
+		}
+		
 
 		let id = randomID();
 
@@ -425,7 +424,30 @@ let render = (app, framework)=>{
 					{
 						find++;
 						content = content.replace(pattern, function(m, openbalise, attributs, contenu, closeBalise) {
-							return executeComponent(composant, {content: contenu});
+							let params = {};
+							if(attributs != "")
+							{
+								if(attributs.charAt(0) === " ")
+									attributs = attributs.slice(1);
+
+
+								let myRe = new RegExp(/([^= ]+)(="([^"]*)")?/g);
+
+								while ((attribut = myRe.exec(attributs)) !== null)
+								{
+									let attrName = attribut[1];
+									let attrValue = attribut[3];
+
+									if(attrValue == undefined)
+										attrValue = "";
+
+									params[attrName] = attrValue;
+								}
+							}
+
+							params.content = contenu;
+
+							return executeComponent(composant, params);
 						});
 					}
 				}
