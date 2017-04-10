@@ -1,3 +1,5 @@
+var template_compile = require("./template_compile.js");
+
 let render = (app, framework)=>{
 
 	this.output = "";
@@ -47,7 +49,7 @@ let render = (app, framework)=>{
 
 		str = str.replace(/\t/g, " ");
 		while(str.search("	") != -1)
-			str = str.replace(/	/g, " ");
+		str = str.replace(/	/g, " ");
 
 		return str;
 	};
@@ -81,7 +83,7 @@ let render = (app, framework)=>{
 		var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 		for( var i=0; i < 32; i++ )
-			text += possible.charAt(Math.floor(Math.random() * possible.length));
+		text += possible.charAt(Math.floor(Math.random() * possible.length));
 
 		if(usedIds.indexOf(text) != -1)
 		{
@@ -227,7 +229,7 @@ let render = (app, framework)=>{
 						return "\ncode += "+p1+" + "+p2+"";
 					});
 				}
-	
+
 				//beautify the code
 				code = jsbeautifier(code);
 
@@ -295,7 +297,7 @@ let render = (app, framework)=>{
 		code += "\nreturn code;";
 
 
-		
+
 
 
 		let execute;
@@ -307,7 +309,7 @@ let render = (app, framework)=>{
 			console.log(code);
 			console.log(e);
 		}
-		
+
 
 		let id = randomID();
 
@@ -319,7 +321,7 @@ let render = (app, framework)=>{
 	let loadCode = (component)=>{
 		component.code = loadFileSync(component.path);
 		component = compilComponent(component);
-	
+
 		return component;
 	};
 
@@ -361,127 +363,130 @@ let render = (app, framework)=>{
 				let css = loadFileSync(file);
 				let patterns = css.match(/(^|\n)([^}{]*)((?:(?!{)(.))*)/g);
 
-				for(pattern of patterns)
-				{
-					if(!new RegExp(/}/).test(pattern))
+					for(pattern of patterns)
 					{
-						css = css.replace(pattern, "composant[type=\""+name+"\"] "+pattern)
+						if(!new RegExp(/}/).test(pattern))
+						{
+							css = css.replace(pattern, "composant[type=\""+name+"\"] "+pattern)
+						}
 					}
+					composants[name].css = css;
 				}
-				composants[name].css = css;
 			}
-		}
 
-		return composants;
-	};
+			return composants;
+		};
 
-	let loadComponents = ()=>{
-		components = listComponents();
-	};
+		let loadComponents = ()=>{
+			components = listComponents();
+		};
 
-	let listCssOfComponents = ()=>{
-		let output = "";
-		for(componentName in components)
-		{
-			component = components[componentName];
-
-			if(component.css != undefined)
+		let listCssOfComponents = ()=>{
+			let output = "";
+			for(componentName in components)
 			{
-				output += component.css;
-			}
-		}
-		return output;
-	};
+				component = components[componentName];
 
-	let makeComponentsCss = ()=>{
-		let css = listCssOfComponents();
-		app.get("/"+framework+"/css/components.css", function(req, res, next){
-			next({content: css, code : 200, contentType: {"Content-Type": "text/css"}});
-		});
-	};
-
-	loadComponents();
-	loadRouteRessources();
-	makeComponentsCss();
-
-	this.rend = (file, next)=>{
-		loadFile(file, (content)=>{
-			let retour = "";
-
-			let replace = ()=>{
-				let find = 0;
-				for(composantName in components)
+				if(component.css != undefined)
 				{
-					composant = components[composantName];
-					let pattern = "";
-					if(pattern !== "")
-					{
-						pattern += "|";
-					}
-					pattern = new RegExp("<("+composant.name+")([^<>]*)>((?:(?!<\/"+composant.name+">)(.|\n))*)<\/"+composant.name+">", "");
+					output += component.css;
+				}
+			}
+			return output;
+		};
 
-					while(pattern.test(content))
+		let makeComponentsCss = ()=>{
+			let css = listCssOfComponents();
+			app.get("/"+framework+"/css/components.css", function(req, res, next){
+				next({content: css, code : 200, contentType: {"Content-Type": "text/css"}});
+			});
+		};
+
+		loadComponents();
+		loadRouteRessources();
+		makeComponentsCss();
+
+		this.rend = (file, data, next)=>{
+			loadFile(file, async (content)=>{
+
+				content = await template_compile(content, data);
+			
+				let retour = "";
+
+				let replace = ()=>{
+					let find = 0;
+					for(composantName in components)
 					{
-						find++;
-						content = content.replace(pattern, function(m, openbalise, attributs, contenu, closeBalise) {
-							let params = {};
-							if(attributs != "")
-							{
-								if(attributs.charAt(0) === " ")
+						composant = components[composantName];
+						let pattern = "";
+						if(pattern !== "")
+						{
+							pattern += "|";
+						}
+						pattern = new RegExp("<("+composant.name+")([^<>]*)>((?:(?!<\/"+composant.name+">)(.|\n))*)<\/"+composant.name+">", "");
+
+						while(pattern.test(content))
+						{
+							find++;
+							content = content.replace(pattern, function(m, openbalise, attributs, contenu, closeBalise) {
+								let params = {};
+								if(attributs != "")
+								{
+									if(attributs.charAt(0) === " ")
 									attributs = attributs.slice(1);
 
 
-								let myRe = new RegExp(/([^= ]+)(="([^"]*)")?/g);
+									let myRe = new RegExp(/([^= ]+)(="([^"]*)")?/g);
 
-								while ((attribut = myRe.exec(attributs)) !== null)
-								{
-									let attrName = attribut[1];
-									let attrValue = attribut[3];
+									while ((attribut = myRe.exec(attributs)) !== null)
+									{
+										let attrName = attribut[1];
+										let attrValue = attribut[3];
 
-									if(attrValue == undefined)
+										if(attrValue == undefined)
 										attrValue = "";
 
-									params[attrName] = attrValue;
+										params[attrName] = attrValue;
+									}
 								}
-							}
 
-							params.content = contenu;
+								params.content = contenu;
 
-							return executeComponent(composant, params);
-						});
+								return executeComponent(composant, params);
+							});
+						}
 					}
-				}
-				if(find > 0)
-				{
-					replace();
-				}
-			};
+					if(find > 0)
+					{
+						replace();
+					}
+				};
 
-			replace();
+				replace();
 
-			let css = loadRessources();
+				let css = loadRessources();
 
-			css += "<link href=\"/"+framework+"/css/components.css\" rel=\"stylesheet\">";
+				css += "<link href=\"/"+framework+"/css/components.css\" rel=\"stylesheet\">";
 
-			content = content.replace(/<\/head>/i, css+"</head>");
-
-
-			var options= {
-				// indentation character 
-				space: '	',
-				// doesn't handle the innerHTML of matching elements 
-				ignore: [],
-				// if true, remove self closing char (e.g <img /> -> <img>) 
-				removeSelfClose: true,
-			};
-			content = victorica(content, options);
+				content = content.replace(/<\/head>/i, css+"</head>");
 
 
-			next({content: content, code: 200, contentType: {"Content-Type": "text/html"}});
-		});
+				var options= {
+					// indentation character
+					space: '	',
+					// doesn't handle the innerHTML of matching elements
+					ignore: [],
+					// if true, remove self closing char (e.g <img /> -> <img>)
+					removeSelfClose: true,
+				};
+				content = victorica(content, options);
+
+
+				next({content: content, code: 200, contentType: {"Content-Type": "text/html"}});
+			});
+		};
+
+		return this;
 	};
 
-	return this;
-};
-
-module.exports = render;
+	module.exports = render;
