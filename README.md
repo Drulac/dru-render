@@ -1,2 +1,2 @@
 # dru-render
-drudru JS middleware used to render HTML
+middleware used to render HTML for the not improvable Drudru.js framework
